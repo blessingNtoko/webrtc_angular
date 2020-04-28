@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AudioStreamService } from '../services/audio-stream.service';
+import { SocketService } from '../services/socket.service';
 
 @Component({
   selector: 'app-peer1',
@@ -13,16 +14,26 @@ export class Peer1Component implements OnInit {
   public sendBtn;
   public msgInputBox;
   public receiveBox;
-  public localConnect;
-  public remoteConnect;
-  public sendChannel;
-  public receiveChannel;
+  // public localConnect;
+  // public remoteConnect;
+  // public sendChannel;
+  // public receiveChannel;
 
   constructor(
-    private audioStream: AudioStreamService
+    private audioStream: AudioStreamService,
+    private sockServe: SocketService
   ) { }
 
   ngOnInit() {
+    this.startUp();
+
+    const offerSub = this.sockServe.getOffer().subscribe(data => {
+      console.log('from subscription offer', data);
+    });
+
+    const answerSub = this.sockServe.getAnswer().subscribe(data => {
+      console.log('from subscription answer', data);
+    });
   }
 
   public startUp() {
