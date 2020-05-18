@@ -173,7 +173,7 @@ export class AudioStreamService {
 
         console.log('flattened', this.flattened);
 
-        const blob = new Blob(this.flattened, { type: 'audio/webm,mp3; codecs=opus' });
+        const blob = new Blob(this.flattened, { type: 'audio/webm; codecs=opus' });
         // console.log('blob', blob);
         try {
 
@@ -224,7 +224,7 @@ export class AudioStreamService {
                   });
 
                   // console.warn('uintBuff before appendBuffer ->', uintBuff);
-                  sourceBuffer.appendBuffer(uintBuff);
+                  sourceBuffer.appendBuffer(buffer);
                   console.warn('is sourceBuffer updating ->', sourceBuffer.updating);
                   // console.warn('uintBuff after appendBuffer ->', uintBuff);
 
