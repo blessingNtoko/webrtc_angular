@@ -18,6 +18,9 @@ export class AudioStreamService {
   public stopped = false;
   public mediaSource;
   public mediaCodecs = 'audio/webm; codecs=opus';
+  public originLength: any;
+  public flattened: any;
+  public reader = new FileReader();
 
   constructor(
     private sockServe: SocketService
@@ -69,15 +72,17 @@ export class AudioStreamService {
     try {
 
       if (event.data.size > 0) {
-        const reader = new FileReader();
 
-        reader.onload = () => {
-          const buffer: any = reader.result;
+        this.reader.onload = () => {
+          const buffer: any = this.reader.result;
           const uint8: any = new Uint8Array(buffer);
+          this.originLength = uint8.length;
+          console.log('Original length ->', uint8);
 
-          this.chunk(uint8, uint8.length / 5);
+
+          this.chunk(uint8, uint8.length / 10);
         };
-        reader.readAsArrayBuffer(event.data);
+        this.reader.readAsArrayBuffer(event.data);
       } else {
         console.log('Next >');
       }
@@ -96,15 +101,19 @@ export class AudioStreamService {
 
       for (let i = 0; i < array.length; i += size) {
         chunk = array.slice(i, size + i);
-        this.sockServe.sendData(chunk);
+        setTimeout(() => {
+          this.sockServe.sendData(chunk);
+        }, 100);
 
         this.sockServe.getData().subscribe(data => {
-          console.log('From subscription in audio service ->', data);
+          // console.log('From subscription in audio service ->', data);
 
           const dataInJSON: any = data;
           const dataFromJSON: any = JSON.parse(dataInJSON);
 
-          this.rejoinAudio(dataFromJSON);
+          setTimeout(() => {
+            this.rejoinAudio(dataFromJSON);
+          }, 0);
         });
       }
 
@@ -147,64 +156,98 @@ export class AudioStreamService {
   public rejoinAudio(data: any) {
     try {
 
+      // let flattened: any;
+      // const reader = new FileReader();
       const objToArray: any = Object.values(data);
-      const blob = new Blob(objToArray, { type: 'audio/mp3; codecs=opus' });
+
+      this.arraysMerged.push(objToArray);
 
       this.mediaSource = new MediaSource();
 
       const audio = document.querySelector('audio');
       audio.src = URL.createObjectURL(this.mediaSource);
 
-      try {
 
-        this.mediaSource.addEventListener('sourceopen', () => {
-          const sourceBuffer = this.mediaSource.addSourceBuffer(this.mediaCodecs);
+      if (this.arraysMerged.length > 9) {
+        this.flattened = [].concat(...this.arraysMerged);
 
-          const reader = new FileReader();
+        console.log('flattened', this.flattened);
 
-          try {
+        const blob = new Blob(this.flattened, { type: 'audio/webm,mp3; codecs=opus' });
+        // console.log('blob', blob);
+        try {
 
-            reader.onload = () => {
-              try {
 
-                const buffer: any = reader.result;
-                const uintBuff = new Uint8Array(buffer);
+          this.mediaSource.addEventListener('sourceopen', () => {
+            const sourceBuffer = this.mediaSource.addSourceBuffer(this.mediaCodecs);
 
-                this.arraysMerged.push(uintBuff);
 
+            try {
+
+              this.reader.onload = () => {
                 try {
 
-                  if (this.arraysMerged.length > 9) {
-                    sourceBuffer.appendBuffer(this.arraysMerged.shift());
+                  const buffer: any = this.reader.result;
+                  const uintBuff = new Uint8Array(buffer);
+                  // console.log('uint8Buffer ->', uintBuff);
 
-                    console.log('Buffered ->', sourceBuffer);
-                    console.log('Ready State ->', this.mediaSource.readyState);
-                  }
+                  // this.arraysMerged.push(uintBuff);
+
+                  // console.log('Buffered ->', sourceBuffer);
+                  console.log('Ready State ->', this.mediaSource.readyState);
+
+                  sourceBuffer.addEventListener('updateend', (evt) => {
+
+                    console.log('Update ended event ->', evt);
+                    // console.warn('audio element ->', audio);
+                    audio.play();
+                  });
+
+                  sourceBuffer.addEventListener('update', (evt) => {
+                    console.log('onupdate event ->', evt);
+                    // audio.play();
+
+                  });
+
+                  sourceBuffer.addEventListener('error', (evt) => {
+                    console.log('onerror event ->', evt);
+                  });
+
+                  sourceBuffer.addEventListener('abort', (evt) => {
+                    console.log('onabort event ->', evt);
+
+                  });
+
+                  sourceBuffer.addEventListener('updatestart', (evt) => {
+                    console.log('onupdatestart event ->', evt);
+                    console.log('Buffered ->', sourceBuffer.buffered);
+                  });
+
+                  // console.warn('uintBuff before appendBuffer ->', uintBuff);
+                  sourceBuffer.appendBuffer(uintBuff);
+                  console.warn('is sourceBuffer updating ->', sourceBuffer.updating);
+                  // console.warn('uintBuff after appendBuffer ->', uintBuff);
+
 
                 } catch (error) {
-                  console.warn('Error in rejoinAudio - 5 ->', error);
+                  console.warn('Error in rejoinAudio - 4 ->', error);
                 }
-                sourceBuffer.addEventListener('updateend', (evt) => {
-                  console.log('Update ended event ->', evt);
+              };
+              this.reader.readAsArrayBuffer(blob);
 
-                  audio.play();
-                });
+            } catch (error) {
+              console.warn('Error in rejoinAudio - 3 ->', error);
 
-              } catch (error) {
-                console.warn('Error in rejoinAudio - 4 ->', error);
-              }
-            };
-            reader.readAsArrayBuffer(blob);
+            }
+          }, false);
 
-          } catch (error) {
-            console.warn('Error in rejoinAudio - 3 ->', error);
+          this.arraysMerged = [];
 
-          }
-        }, false);
-
-      } catch (error) {
-        console.warn('Error in rejoinAudio - 2 ->', error);
+        } catch (error) {
+          console.warn('Error in rejoinAudio - 2 ->', error);
+        }
       }
+
 
     } catch (error) {
       console.warn('Error in rejoinAudio - 1 ->', error);
