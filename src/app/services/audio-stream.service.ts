@@ -50,7 +50,7 @@ export class AudioStreamService {
       };
 
       this.mediaRecord.onstart = (event) => {
-        console.warn('Recording started...')
+        console.warn('Recording started...');
       };
 
       this.mediaRecord.ondataavailable = (event) => {
@@ -120,8 +120,8 @@ export class AudioStreamService {
 
       reader.onload = () => {
 
-        let temp: any = reader.result;
-        let buffer = new Uint8Array(temp);
+        const temp: any = reader.result;
+        const buffer = new Uint8Array(temp);
 
         this.chunk(buffer, 5);
 

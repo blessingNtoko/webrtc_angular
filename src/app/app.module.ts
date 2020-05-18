@@ -10,7 +10,7 @@ import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
 const config: SocketIoConfig = {
   url: 'http://localhost:4170',
   options: {}
-}
+};
 
 @NgModule({
   declarations: [
