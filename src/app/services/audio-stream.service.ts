@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SocketService } from '../services/socket.service';
+import { SoundbufferService } from '../services/soundbuffer.service';
 
 declare let MediaRecorder: any;
 
@@ -20,10 +21,11 @@ export class AudioStreamService {
   public mediaCodecs = 'audio/webm; codecs=opus';
   public originLength: any;
   public flattened: any;
-  public reader = new FileReader();
+  // public reader = new FileReader();
 
   constructor(
-    private sockServe: SocketService
+    private sockServe: SocketService,
+    public soundBuff: SoundbufferService
   ) { }
 
   public getStream() {
@@ -70,11 +72,12 @@ export class AudioStreamService {
   public handleDataAvailable(event) {
 
     try {
+      const reader = new FileReader();
 
       if (event.data.size > 0) {
 
-        this.reader.onload = () => {
-          const buffer: any = this.reader.result;
+        reader.onload = () => {
+          const buffer: any = reader.result;
           const uint8: any = new Uint8Array(buffer);
           this.originLength = uint8.length;
           console.log('Original length ->', uint8);
@@ -82,7 +85,7 @@ export class AudioStreamService {
 
           this.chunk(uint8, uint8.length / 10);
         };
-        this.reader.readAsArrayBuffer(event.data);
+        reader.readAsArrayBuffer(event.data);
       } else {
         console.log('Next >');
       }
@@ -101,9 +104,7 @@ export class AudioStreamService {
 
       for (let i = 0; i < array.length; i += size) {
         chunk = array.slice(i, size + i);
-        setTimeout(() => {
-          this.sockServe.sendData(chunk);
-        }, 100);
+        this.sockServe.sendData(chunk);
 
         this.sockServe.getData().subscribe(data => {
           // console.log('From subscription in audio service ->', data);
@@ -111,9 +112,9 @@ export class AudioStreamService {
           const dataInJSON: any = data;
           const dataFromJSON: any = JSON.parse(dataInJSON);
 
-          setTimeout(() => {
-            this.rejoinAudio(dataFromJSON);
-          }, 0);
+          // setTimeout(() => {
+          this.rejoinAudio(dataFromJSON);
+          // }, 0);
         });
       }
 
@@ -154,94 +155,102 @@ export class AudioStreamService {
   }
 
   public rejoinAudio(data: any) {
+    console.log('Joining...');
     try {
 
       // let flattened: any;
-      // const reader = new FileReader();
+      const reader = new FileReader();
       const objToArray: any = Object.values(data);
 
       this.arraysMerged.push(objToArray);
 
-      this.mediaSource = new MediaSource();
+      // this.mediaSource = new MediaSource();
 
-      const audio = document.querySelector('audio');
-      audio.src = URL.createObjectURL(this.mediaSource);
+      // const audio = document.querySelector('audio');
+      // audio.src = URL.createObjectURL(this.mediaSource);
 
 
       if (this.arraysMerged.length > 9) {
         this.flattened = [].concat(...this.arraysMerged);
 
-        console.log('flattened', this.flattened);
+        // this.soundBuff.addChunk(this.arraysMerged.shift());
+        this.soundBuff.addChunk(this.flattened);
 
-        const blob = new Blob(this.flattened, { type: 'audio/webm; codecs=opus' });
+        // console.log('flattened', this.flattened);
+
+        // const blob = new Blob(this.flattened, { type: 'audio/webm; codecs=opus' });
+        // this.soundBuff.addChunk(this.flattened);
+
         // console.log('blob', blob);
         try {
 
 
-          this.mediaSource.addEventListener('sourceopen', () => {
-            const sourceBuffer = this.mediaSource.addSourceBuffer(this.mediaCodecs);
+          // this.mediaSource.addEventListener('sourceopen', () => {
+          // const sourceBuffer = this.mediaSource.addSourceBuffer(this.mediaCodecs);
 
 
-            try {
+          try {
 
-              this.reader.onload = () => {
-                try {
+            // reader.onload = () => {
+            //   try {
 
-                  const buffer: any = this.reader.result;
-                  const uintBuff = new Uint8Array(buffer);
-                  // console.log('uint8Buffer ->', uintBuff);
+            //     const buffer: any = reader.result;
+            //     const uintBuff = new Uint8Array(buffer);
 
-                  // this.arraysMerged.push(uintBuff);
+                // this.soundBuff.addChunk(buffer);
+                // console.log('uint8Buffer ->', uintBuff);
 
-                  // console.log('Buffered ->', sourceBuffer);
-                  console.log('Ready State ->', this.mediaSource.readyState);
+                // this.arraysMerged.push(uintBuff);
 
-                  sourceBuffer.addEventListener('updateend', (evt) => {
+                // console.log('Buffered ->', sourceBuffer);
+                // console.log('Ready State ->', this.mediaSource.readyState);
 
-                    console.log('Update ended event ->', evt);
-                    // console.warn('audio element ->', audio);
-                    audio.play();
-                  });
+                // sourceBuffer.addEventListener('updateend', (evt) => {
 
-                  sourceBuffer.addEventListener('update', (evt) => {
-                    console.log('onupdate event ->', evt);
-                    // audio.play();
+                //   console.log('Update ended event ->', evt);
+                //   // console.warn('audio element ->', audio);
+                //   audio.play();
+                // });
 
-                  });
+                // sourceBuffer.addEventListener('update', (evt) => {
+                //   console.log('onupdate event ->', evt);
+                //   // audio.play();
 
-                  sourceBuffer.addEventListener('error', (evt) => {
-                    console.log('onerror event ->', evt);
-                  });
+                // });
 
-                  sourceBuffer.addEventListener('abort', (evt) => {
-                    console.log('onabort event ->', evt);
+                // sourceBuffer.addEventListener('error', (evt) => {
+                //   console.log('onerror event ->', evt);
+                // });
 
-                  });
+                // sourceBuffer.addEventListener('abort', (evt) => {
+                //   console.log('onabort event ->', evt);
 
-                  sourceBuffer.addEventListener('updatestart', (evt) => {
-                    console.log('onupdatestart event ->', evt);
-                    console.log('Buffered ->', sourceBuffer.buffered);
-                  });
+                // });
 
-                  // console.warn('uintBuff before appendBuffer ->', uintBuff);
-                  sourceBuffer.appendBuffer(buffer);
-                  console.warn('is sourceBuffer updating ->', sourceBuffer.updating);
-                  // console.warn('uintBuff after appendBuffer ->', uintBuff);
+                // sourceBuffer.addEventListener('updatestart', (evt) => {
+                //   console.log('onupdatestart event ->', evt);
+                //   console.log('Buffered ->', sourceBuffer.buffered);
+                // });
+
+                // // console.warn('uintBuff before appendBuffer ->', uintBuff);
+                // sourceBuffer.appendBuffer(buffer);
+                // console.warn('is sourceBuffer updating ->', sourceBuffer.updating);
+                // console.warn('uintBuff after appendBuffer ->', uintBuff);
 
 
-                } catch (error) {
-                  console.warn('Error in rejoinAudio - 4 ->', error);
-                }
-              };
-              this.reader.readAsArrayBuffer(blob);
+            //   } catch (error) {
+            //     console.warn('Error in rejoinAudio - 4 ->', error);
+            //   }
+            // };
+            // reader.readAsArrayBuffer(blob);
 
-            } catch (error) {
-              console.warn('Error in rejoinAudio - 3 ->', error);
+          } catch (error) {
+            console.warn('Error in rejoinAudio - 3 ->', error);
 
-            }
-          }, false);
+          }
+          // }, false);
 
-          this.arraysMerged = [];
+          // this.arraysMerged = [];
 
         } catch (error) {
           console.warn('Error in rejoinAudio - 2 ->', error);
