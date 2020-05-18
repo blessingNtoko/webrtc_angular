@@ -96,12 +96,12 @@ export class AudioStreamService {
 
       for (let i = 0; i < array.length; i += size) {
         chunk = array.slice(i, size + i);
-        // this.sockServe.sendData(chunk);
+        this.sockServe.sendData(chunk);
 
-        // this.rtc.audioObserve.subscribe(data => {
-        //   console.log('From subscription in audio service ->', data);
-        //   this.rejoinAudio(data);
-        // });
+        this.sockServe.getData().subscribe(data => {
+          console.log('From subscription in audio service ->', data);
+          // this.rejoinAudio(data);
+        });
       }
 
     } catch (error) {
