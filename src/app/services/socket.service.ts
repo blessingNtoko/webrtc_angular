@@ -10,21 +10,13 @@ export class SocketService {
     private socket: Socket
   ) { }
 
-  public sendOffer(offer: any) {
-    console.log('Offered ->', offer);
-    this.socket.emit('offer', offer);
+  public sendData(data: any) {
+    console.log('In socket service');
+    this.socket.emit('message', data);
   }
 
-  public getOffer() {
-    return this.socket.fromEvent('offer');
-  }
-
-  public sendAnswer(answer: any) {
-    this.socket.emit('answer', answer);
-  }
-
-  public getAnswer() {
-    return this.socket.fromEvent('answer');
+  public getData() {
+    return this.socket.fromEvent('message');
   }
 
 }
