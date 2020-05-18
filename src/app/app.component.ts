@@ -7,7 +7,7 @@ import { SocketService } from './services/socket.service';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit{
+export class AppComponent implements OnInit {
   title = 'webRTC-Angular';
 
   constructor(
@@ -16,10 +16,10 @@ export class AppComponent implements OnInit{
   ) {}
 
   ngOnInit() {
-    this.socketServe.sendData('Hello World');
+    // this.socketServe.sendData('Hello World');
 
-    this.socketServe.getData().subscribe(data => {
-      console.log(data);
-    });
+    // this.socketServe.getData().subscribe(data => {
+    //   console.log(data);
+    // });
   }
 }

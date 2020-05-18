@@ -57,7 +57,7 @@ export class AudioStreamService {
         this.handleDataAvailable(event);
       };
 
-      this.mediaRecord.start(700);
+      this.mediaRecord.start(500);
 
     } catch (error) {
       console.warn('Error in record ->', error);
@@ -75,7 +75,7 @@ export class AudioStreamService {
           const buffer: any = reader.result;
           const uint8: any = new Uint8Array(buffer);
 
-          this.chunk(uint8, 10);
+          this.chunk(uint8, uint8.length / 5);
         };
         reader.readAsArrayBuffer(event.data);
       } else {
@@ -100,7 +100,11 @@ export class AudioStreamService {
 
         this.sockServe.getData().subscribe(data => {
           console.log('From subscription in audio service ->', data);
-          // this.rejoinAudio(data);
+
+          const dataInJSON: any = data;
+          const dataFromJSON: any = JSON.parse(dataInJSON);
+
+          this.rejoinAudio(dataFromJSON);
         });
       }
 
@@ -123,7 +127,7 @@ export class AudioStreamService {
         const temp: any = reader.result;
         const buffer = new Uint8Array(temp);
 
-        this.chunk(buffer, 5);
+        this.chunk(buffer, buffer.length / 10);
 
       };
       reader.readAsArrayBuffer(audioFile.files[0]);
@@ -134,8 +138,10 @@ export class AudioStreamService {
   }
 
   public stop() {
+    console.log('Stopping...');
     this.stopped = true;
     this.mediaRecord.stop();
+    // window.location.reload();
   }
 
   public rejoinAudio(data: any) {
