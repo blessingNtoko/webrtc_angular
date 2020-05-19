@@ -5,26 +5,17 @@ const ctx = new AudioContext();
 const bufferSize = 6;
 const debug = true;
 
-declare let MediaRecorder: any;
-
 @Injectable({
   providedIn: 'root'
 })
 export class AudioStreamService {
 
-  public mediaRecord: any;
   public mediaConstraints = {
     video: false,
     audio: true
   };
-  public options = { mimeType: 'audio/webm' };
-  public arraysMerged = [];
   public stopped = false;
-  public mediaSource;
   public mediaCodecs = 'audio/webm';
-  public originLength: any;
-  public flattened: any;
-
   private chunks: Array<AudioBufferSourceNode> = [];
   private isPlaying = false;
   private startTime = 0;
@@ -95,7 +86,6 @@ export class AudioStreamService {
   public stop() {
     console.log('Stopping...');
     this.stopped = true;
-    this.mediaRecord.stop();
   }
 
   public rejoinAudio(chunk: any) {
