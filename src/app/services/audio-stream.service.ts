@@ -50,40 +50,45 @@ export class AudioStreamService {
   }
 
   public record(stream) {
-    console.log('recording...');
+    try {
 
-    const source = ctx.createMediaStreamSource(stream);
-    const processor = ctx.createScriptProcessor(1024, 1, 1);
+      console.log('recording...');
 
-    source.connect(processor);
-    processor.connect(ctx.destination);
+      const source = ctx.createMediaStreamSource(stream);
+      const processor = ctx.createScriptProcessor(1024, 1, 1);
 
-    console.log('source ->', source);
-    console.log('source ->', processor);
+      source.connect(processor);
+      processor.connect(ctx.destination);
 
-    processor.onaudioprocess = (e) => {
-      console.log('onaudioprocess event ->', e);
-      console.log(e.inputBuffer);
+      console.log('source ->', source);
+      console.log('source ->', processor);
 
-      const newFloat = e.inputBuffer.getChannelData(0);
+      processor.onaudioprocess = (e) => {
+        console.log('onaudioprocess event ->', e);
+        console.log(e.inputBuffer);
 
-      this.sockServe.sendData(newFloat);
+        const newFloat = e.inputBuffer.getChannelData(0);
 
-      console.log('newFloat ->', newFloat);
-    };
+        this.sockServe.sendData(newFloat);
 
-    this.sockServe.getData().subscribe(data => {
-      console.log('From subscription in audio service ->');
+        console.log('newFloat ->', newFloat);
+      };
 
-      const dataInJSON: any = data;
-      const dataFromJSON: any = JSON.parse(dataInJSON);
+      this.sockServe.getData().subscribe(data => {
+        console.log('From subscription in audio service ->');
 
-      console.log('dataFromJSON ->', dataFromJSON);
+        const dataInJSON: any = data;
+        const dataFromJSON: any = JSON.parse(dataInJSON);
 
-      setTimeout(() => {
-        this.rejoinAudio(dataFromJSON);
-      }, 0);
-    });
+        console.log('dataFromJSON ->', dataFromJSON);
+
+        setTimeout(() => {
+          this.rejoinAudio(dataFromJSON);
+        }, 0);
+      });
+    } catch (error) {
+      console.warn('error ->', error);
+    }
 
   }
 
