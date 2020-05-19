@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 
 const ctx = new AudioContext();
-let sampleRate: number;
-const bufferSize = 8;
+const bufferSize = 10;
 const debug = true;
 
 @Injectable({
@@ -19,7 +18,7 @@ export class SoundbufferService {
   constructor() { }
 
   private createChunk(chunk: Float32Array) {
-    const audioBuffer = ctx.createBuffer(2, chunk.length, ctx.sampleRate);
+    const audioBuffer = ctx.createBuffer(1, chunk.length, ctx.sampleRate);
     audioBuffer.getChannelData(0).set(chunk);
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
@@ -37,7 +36,7 @@ export class SoundbufferService {
   }
 
   private log(data: string) {
-    if (!debug) {
+    if (debug) {
       console.log(new Date().toUTCString() + ' : ' + data);
     }
   }
@@ -64,8 +63,8 @@ export class SoundbufferService {
       this.startTime = ctx.currentTime;
       this.lastChunkOffset = 0;
       for (let i = 0; i < this.chunks.length; i++) {
-        const chunk = this.chunks[i];
-        chunk.start(this.startTime + this.lastChunkOffset);
+        const chunkie = this.chunks[i];
+        chunkie.start(this.startTime + this.lastChunkOffset);
         this.lastChunkOffset += chunk.buffer.duration;
       }
     }
