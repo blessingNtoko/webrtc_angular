@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { SocketService } from '../services/socket.service';
 
 const ctx = new AudioContext();
-const bufferSize = 10;
+const bufferSize = 6;
 const debug = true;
 
 declare let MediaRecorder: any;
@@ -17,11 +17,11 @@ export class AudioStreamService {
     video: false,
     audio: true
   };
-  public options = { mimeType: 'audio/webm; codecs=opus' };
+  public options = { mimeType: 'audio/webm' };
   public arraysMerged = [];
   public stopped = false;
   public mediaSource;
-  public mediaCodecs = 'audio/webm; codecs=opus';
+  public mediaCodecs = 'audio/webm';
   public originLength: any;
   public flattened: any;
 
@@ -50,93 +50,41 @@ export class AudioStreamService {
   }
 
   public record(stream) {
-    try {
+    console.log('recording...');
 
-      this.stopped = false;
-      console.log('Recording...');
-      this.mediaRecord = new MediaRecorder(stream, this.options);
+    const source = ctx.createMediaStreamSource(stream);
+    const processor = ctx.createScriptProcessor(1024, 1, 1);
 
-      this.mediaRecord.onstop = (event) => {
-        console.warn('Recording stopped...');
-      };
+    source.connect(processor);
+    processor.connect(ctx.destination);
 
-      this.mediaRecord.onstart = (event) => {
-        console.warn('Recording started...');
-      };
+    console.log('source ->', source);
+    console.log('source ->', processor);
 
-      this.mediaRecord.ondataavailable = (event) => {
-        this.handleDataAvailable(event);
-      };
+    processor.onaudioprocess = (e) => {
+      console.log('onaudioprocess event ->', e);
+      console.log(e.inputBuffer);
 
-      this.mediaRecord.start(1000);
+      const newFloat = e.inputBuffer.getChannelData(0);
 
-    } catch (error) {
-      console.warn('Error in record ->', error);
-    }
-  }
+      this.sockServe.sendData(newFloat);
 
-  public handleDataAvailable(event) {
+      console.log('newFloat ->', newFloat);
+    };
 
-    try {
-      const reader = new FileReader();
+    this.sockServe.getData().subscribe(data => {
+      console.log('From subscription in audio service ->');
 
-      if (event.data.size > 0) {
+      const dataInJSON: any = data;
+      const dataFromJSON: any = JSON.parse(dataInJSON);
 
-        reader.onload = () => {
-          const buffer: any = reader.result;
-          const uint8: any = new Uint8Array(buffer);
+      console.log('dataFromJSON ->', dataFromJSON);
 
-          // this.sockServe.sendData(uint8);
-
-          // this.sockServe.getData().subscribe(data => {
-
-          //   const dataInJSON: any = data;
-          //   const dataFromJSON: any = JSON.parse(dataInJSON);
-
-          //   setTimeout(() => {
-          //   this.rejoinAudio(dataFromJSON);
-          //   }, 0);
-          // });
-
-
-          this.chunk(uint8, uint8.length / 2);
-        };
-        reader.readAsArrayBuffer(event.data);
-      } else {
-        console.log('Next >');
-      }
-
-    } catch (error) {
-      console.warn('Error in handleDataAvailable ->', error);
-    }
-
-  }
-
-  public chunk(array: any, size: number) {
-    try {
-
-      console.log('Chunking...');
-      let chunk: any;
-
-      for (let i = 0; i < array.length; i += size) {
-        chunk = array.slice(i, size + i);
-        this.sockServe.sendData(chunk);
-      }
-
-      this.sockServe.getData().subscribe(data => {
-        // console.log('From subscription in audio service ->', data);
-
-        const dataInJSON: any = data;
-        const dataFromJSON: any = JSON.parse(dataInJSON);
-
-        setTimeout(() => {
+      setTimeout(() => {
         this.rejoinAudio(dataFromJSON);
-        }, 0);
-      });
+      }, 0);
+    });
 
-    } catch (error) {
-      console.warn('Error in chunk ->', error);
-    }
   }
 
   public stop() {
@@ -145,11 +93,11 @@ export class AudioStreamService {
     this.mediaRecord.stop();
   }
 
-  public rejoinAudio(data: any) {
+  public rejoinAudio(chunk: any) {
     console.log('Joining...');
     try {
 
-      const objToArray: any = Object.values(data);
+      const objToArray: any = Object.values(chunk);
       const float32 = new Float32Array(objToArray);
 
       this.addChunk(float32);
@@ -160,7 +108,7 @@ export class AudioStreamService {
   }
 
   private createChunk(chunk: Float32Array) {
-    const audioBuffer = ctx.createBuffer(1, chunk.length, ctx.sampleRate);
+    const audioBuffer = ctx.createBuffer(1, chunk.length, 48000);
     audioBuffer.getChannelData(0).set(chunk);
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
@@ -187,17 +135,20 @@ export class AudioStreamService {
     if (this.isPlaying && (this.chunks.length > bufferSize)) {
       this.log('chunk discarded');
       return; // throw away
-    } else if (this.isPlaying && (this.chunks.length <= bufferSize)) { // schedule & add right now
+    } else if (this.isPlaying && (this.chunks.length <= bufferSize)) {
+      // schedule & add right now
       this.log('chunk accepted');
       const chunk = this.createChunk(data);
       chunk.start(this.startTime + this.lastChunkOffset);
       this.lastChunkOffset += chunk.buffer.duration;
       this.chunks.push(chunk);
-    } else if ((this.chunks.length < (bufferSize / 2)) && !this.isPlaying) {  // add & don't schedule
+    } else if ((this.chunks.length < (bufferSize / 2)) && !this.isPlaying) {
+      // add & don't schedule
       this.log('chunk queued');
       const chunk = this.createChunk(data);
       this.chunks.push(chunk);
-    } else { // add & schedule entire buffer
+    } else {
+      // add & schedule entire buffer
       this.log('queued chunks scheduled');
       this.isPlaying = true;
       const chunk = this.createChunk(data);
@@ -212,31 +163,5 @@ export class AudioStreamService {
       }
     }
   }
-
-  public getAudio() {
-    try {
-
-      const audioFile: any = document.getElementById('audioFile');
-      console.warn('audioFile ->', audioFile);
-      const reader = new FileReader();
-
-      console.warn('Files in audioFile ->', audioFile.files);
-
-      reader.onload = () => {
-
-        const temp: any = reader.result;
-        const buffer = new Uint8Array(temp);
-
-        this.chunk(buffer, buffer.length / 10);
-
-      };
-      reader.readAsArrayBuffer(audioFile.files[0]);
-
-    } catch (error) {
-      console.warn('Error in getAudio ->', error);
-    }
-  }
-
-
 
 }
