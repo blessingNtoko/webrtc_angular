@@ -42,7 +42,7 @@ export class AudioStreamService {
     }
   }
 
-  public record(stream: any) {
+  private record(stream: any) {
     try {
       console.log('recording...');
       this.source = ctx.createMediaStreamSource(stream);
@@ -75,7 +75,7 @@ export class AudioStreamService {
     this.processor.disconnect(ctx.destination);
   }
 
-  public rejoinAudio(chunk: any) {
+  private rejoinAudio(chunk: any) {
     console.log('Joining...');
     try {
       const objToArray: any = Object.values(chunk);
