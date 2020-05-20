@@ -7,7 +7,7 @@ io.on('connection', (socket) => {
     console.log('A user has connected');
 
     socket.on('message', (message) => {
-        console.log('A message has been emitted', message);
+        // console.log('A message has been emitted', message);
         io.emit('message', message);
     });
 

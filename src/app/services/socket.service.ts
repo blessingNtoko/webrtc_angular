@@ -11,11 +11,7 @@ export class SocketService {
   ) { }
 
   public sendData(data: any) {
-    const received = JSON.stringify(data);
-
-    console.log('In socket service');
-
-    this.socket.emit('message', received);
+    this.socket.emit('message', data);
   }
 
   public getData() {

@@ -20,6 +20,8 @@ export class AudioStreamService {
   private isPlaying = false;
   private startTime = 0;
   private lastChunkOffset = 0;
+  private source;
+  private processor;
 
   constructor(
     private sockServe: SocketService,
@@ -40,58 +42,42 @@ export class AudioStreamService {
     }
   }
 
-  public record(stream) {
+  public record(stream: any) {
     try {
-
       console.log('recording...');
+      this.source = ctx.createMediaStreamSource(stream);
+      this.processor = ctx.createScriptProcessor(1024, 1, 1);
 
-      const source = ctx.createMediaStreamSource(stream);
-      const processor = ctx.createScriptProcessor(1024, 1, 1);
+      console.log('source ->', this.source);
+      console.log('source ->', this.processor);
 
-      source.connect(processor);
-      processor.connect(ctx.destination);
+      this.processor.addEventListener('audioprocess', (e: any) => {
 
-      console.log('source ->', source);
-      console.log('source ->', processor);
+        this.sockServe.sendData(e.inputBuffer.getChannelData(0));
+      });
 
-      processor.onaudioprocess = (e) => {
-        console.log('onaudioprocess event ->', e);
-        console.log(e.inputBuffer);
-
-        const newFloat = e.inputBuffer.getChannelData(0);
-
-        this.sockServe.sendData(newFloat);
-
-        console.log('newFloat ->', newFloat);
-      };
+      this.source.connect(this.processor);
+      this.processor.connect(ctx.destination);
 
       this.sockServe.getData().subscribe(data => {
-        console.log('From subscription in audio service ->');
 
-        const dataInJSON: any = data;
-        const dataFromJSON: any = JSON.parse(dataInJSON);
-
-        console.log('dataFromJSON ->', dataFromJSON);
-
-        setTimeout(() => {
-          this.rejoinAudio(dataFromJSON);
-        }, 0);
+        this.rejoinAudio(data);
       });
     } catch (error) {
       console.warn('error ->', error);
     }
-
   }
 
   public stop() {
     console.log('Stopping...');
     this.stopped = true;
+    this.source.disconnect(this.processor);
+    this.processor.disconnect(ctx.destination);
   }
 
   public rejoinAudio(chunk: any) {
     console.log('Joining...');
     try {
-
       const objToArray: any = Object.values(chunk);
       const float32 = new Float32Array(objToArray);
 
@@ -103,11 +89,13 @@ export class AudioStreamService {
   }
 
   private createChunk(chunk: Float32Array) {
-    const audioBuffer = ctx.createBuffer(1, chunk.length, 48000);
+    const audioBuffer = ctx.createBuffer(1, chunk.length, ctx.sampleRate);
     audioBuffer.getChannelData(0).set(chunk);
+
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(ctx.destination);
+
     source.onended = (e: Event) => {
       this.chunks.splice(this.chunks.indexOf(source), 1);
       if (this.chunks.length === 0) {
@@ -116,7 +104,6 @@ export class AudioStreamService {
         this.lastChunkOffset = 0;
       }
     };
-
     return source;
   }
 
@@ -158,5 +145,4 @@ export class AudioStreamService {
       }
     }
   }
-
 }
