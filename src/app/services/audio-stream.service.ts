@@ -49,7 +49,7 @@ export class AudioStreamService {
       this.processor = ctx.createScriptProcessor(1024, 1, 1);
 
       console.log('source ->', this.source);
-      console.log('source ->', this.processor);
+      console.log('processor ->', this.processor);
 
       this.processor.addEventListener('audioprocess', (e: any) => {
 
